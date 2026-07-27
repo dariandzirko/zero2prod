@@ -1,29 +1,18 @@
+use crate::routes::{health_check, subscribe};
 use actix_web::dev::Server;
-use actix_web::{App, HttpResponse, HttpServer, web};
+use actix_web::{App, HttpServer, web};
+use sqlx::PgPool;
 use std::net::TcpListener;
 
-#[derive(serde::Deserialize)]
-struct FormData {
-    email: String,
-    name: String,
-}
-
-pub fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
-    let server = HttpServer::new(|| {
+pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
+    let db_pool = web::Data::new(db_pool);
+    let server = HttpServer::new(move || {
         App::new()
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
+            .app_data(db_pool.clone())
     })
     .listen(listener)?
     .run();
-
     Ok(server)
-}
-
-async fn health_check() -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-async fn subscribe(_form: web::Form<FormData>) -> HttpResponse {
-    HttpResponse::Ok().finish()
 }
